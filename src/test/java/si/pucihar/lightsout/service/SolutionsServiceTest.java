@@ -46,14 +46,14 @@ public class SolutionsServiceTest {
   @TestTransaction
   void saveWrongSolution() {
     final Player persistedPlayer = getPersistedPlayer();
-    final Problem problem = getPersistedProblem(persistedPlayer.getId(), "problem");
+    final Problem problem = getPersistedProblem(persistedPlayer.getId(), new int[0][0]);
 
     final SolutionStep solutionStep1 = new SolutionStep(1, 2, 3);
     final SolutionStep solutionStep2 = new SolutionStep(2, 2, 4);
     final List<SolutionStep> solutionSteps = Arrays.asList(solutionStep1, solutionStep2);
 
     when(lightsOutSolver.stepsSolveProblem(eq(problem.getInitialProblemState()), eq(solutionSteps)))
-      .thenReturn(LightsOutSolver.ValidationResult.failure("wrong solution."));
+      .thenReturn(LightsOutSolver.SolverResult.failure("wrong solution."));
 
     assertThrows(BadRequestException.class, () -> solutionsService.saveSolution(
       new Solution(persistedPlayer.getId(), problem.getId(), solutionSteps)));
@@ -63,14 +63,14 @@ public class SolutionsServiceTest {
   @TestTransaction
   void saveSolution() {
     final Player persistedPlayer = getPersistedPlayer();
-    final Problem persistedProblem = getPersistedProblem(persistedPlayer.getId(), "problem");
+    final Problem persistedProblem = getPersistedProblem(persistedPlayer.getId(), new int[0][0]);
 
     final SolutionStep solutionStep1 = new SolutionStep(1, 2, 3);
     final SolutionStep solutionStep2 = new SolutionStep(2, 2, 4);
     final List<SolutionStep> solutionSteps = Arrays.asList(solutionStep1, solutionStep2);
 
     when(lightsOutSolver.stepsSolveProblem(eq(persistedProblem.getInitialProblemState()), eq(solutionSteps)))
-      .thenReturn(LightsOutSolver.ValidationResult.success());
+      .thenReturn(LightsOutSolver.SolverResult.success());
 
     final Solution solution = solutionsService.saveSolution(new Solution(persistedPlayer.getId(), persistedProblem.getId(), solutionSteps));
 
@@ -88,7 +88,7 @@ public class SolutionsServiceTest {
   @Test
   @TestTransaction
   void getAllSolutionsForProblemIdWithoutSolutions() {
-    final Problem persistedProblem = getPersistedProblem(getPersistedPlayer().getId(), "problem");
+    final Problem persistedProblem = getPersistedProblem(getPersistedPlayer().getId(), new int[0][0]);
     assertEquals(0, solutionsService.getAllSolutionsForProblemId(persistedProblem.getId()).size());
   }
 
@@ -96,7 +96,7 @@ public class SolutionsServiceTest {
   @TestTransaction
   void getAllSolutionsForProblemId() {
     final Player persistedPlayer = getPersistedPlayer();
-    final Problem persistedProblem1 = getPersistedProblem(persistedPlayer.getId(), "problem");
+    final Problem persistedProblem1 = getPersistedProblem(persistedPlayer.getId(), new int[0][0]);
     final Solution persistedSolution1 = getPersistedSolution(persistedPlayer.getId(), persistedProblem1.getId(), 3);
     final Solution persistedSolution2 = getPersistedSolution(persistedPlayer.getId(), persistedProblem1.getId(), 4);
 
@@ -122,7 +122,7 @@ public class SolutionsServiceTest {
   @TestTransaction
   void getAllSolutionsForPlayerWithUsername() {
     final Player persistedPlayer = getPersistedPlayer();
-    final Problem problem = getPersistedProblem(persistedPlayer.getId(), "problem");
+    final Problem problem = getPersistedProblem(persistedPlayer.getId(), new int[0][0]);
     final Solution persistedSolution1 = getPersistedSolution(persistedPlayer.getId(), problem.getId(), 2);
     final Solution persistedSolution2 = getPersistedSolution(persistedPlayer.getId(), problem.getId(), 3);
 
@@ -139,8 +139,8 @@ public class SolutionsServiceTest {
     final Player persistedPlayer1 = getPersistedPlayer();
     final Player persistedPlayer2 = getPersistedPlayer();
 
-    final Problem problem1 = getPersistedProblem(persistedPlayer1.getId(), "problem1");
-    final Problem problem2 = getPersistedProblem(persistedPlayer1.getId(), "problem2");
+    final Problem problem1 = getPersistedProblem(persistedPlayer1.getId(), new int[0][0]);
+    final Problem problem2 = getPersistedProblem(persistedPlayer1.getId(), new int[0][0]);
 
     final Solution persistedSolution1 = getPersistedSolution(persistedPlayer1.getId(), problem1.getId(), 2);
     final Solution persistedSolution2 = getPersistedSolution(persistedPlayer2.getId(), problem2.getId(), 3);
@@ -159,7 +159,7 @@ public class SolutionsServiceTest {
     return Player.from(player);
   }
 
-  private Problem getPersistedProblem(long playerId, String initialProblem) {
+  private Problem getPersistedProblem(long playerId, int[][] initialProblem) {
     final ProblemImpl problemImpl = new ProblemImpl();
     problemImpl.setInitialProblemState(initialProblem);
     final PlayerImpl player = em.getReference(PlayerImpl.class, playerId);

@@ -43,13 +43,13 @@ public class ProblemsServiceTest {
   void saveProblem() {
     final Player persistedPlayer = getPersistedPlayer();
 
-    when(lightsOutSolver.isSolvable(eq("initialProblemState"))).thenReturn(LightsOutSolver.ValidationResult.success());
-    final Problem problem = problemsService.saveProblem(new Problem("initialProblemState", persistedPlayer.getId()));
+    when(lightsOutSolver.isSolvable(eq(new int[0][0]))).thenReturn(LightsOutSolver.SolverResult.success());
+    final Problem problem = problemsService.saveProblem(new Problem(new int[0][0], persistedPlayer.getId()));
 
     assertTrue(em.createQuery("SELECT p FROM ProblemImpl p", ProblemImpl.class).getResultStream()
       .map(Problem::from)
       .anyMatch(foundProblem -> foundProblem.equals(problem)));
-    verify(lightsOutSolver).isSolvable(eq("initialProblemState"));
+    verify(lightsOutSolver).isSolvable(eq(new int[0][0]));
   }
 
   @Test
@@ -57,13 +57,13 @@ public class ProblemsServiceTest {
   void saveUnsolvableProblem() {
     final Player persistedPlayer = getPersistedPlayer();
 
-    when(lightsOutSolver.isSolvable(eq("initialProblemState"))).thenReturn(LightsOutSolver.ValidationResult.failure("unsolvable"));
+    when(lightsOutSolver.isSolvable(eq(new int[0][0]))).thenReturn(LightsOutSolver.SolverResult.failure("unsolvable"));
     assertThrows(BadRequestException.class,
-      () -> problemsService.saveProblem(new Problem("initialProblemState", persistedPlayer.getId())),
+      () -> problemsService.saveProblem(new Problem(new int[0][0], persistedPlayer.getId())),
       "unsolvable");
 
     assertEquals(em.createQuery("SELECT p FROM ProblemImpl p", ProblemImpl.class).getResultList().size(), 0);
-    verify(lightsOutSolver).isSolvable(eq("initialProblemState"));
+    verify(lightsOutSolver).isSolvable(eq(new int[0][0]));
   }
 
   @Test
@@ -75,7 +75,7 @@ public class ProblemsServiceTest {
   @TestTransaction
   void findProblem() {
     final Player player = getPersistedPlayer();
-    final Problem problem = getPersistedProblem(player.getId(), "initialProblem");
+    final Problem problem = getPersistedProblem(player.getId(), new int[0][0]);
 
     Assertions.assertEquals(problemsService.getProblemForId(problem.getId()), problem);
   }
@@ -95,8 +95,8 @@ public class ProblemsServiceTest {
   @TestTransaction
   void getAllProblemsForCreator() {
     final Player persistedPlayer = getPersistedPlayer();
-    final Problem problem1 = getPersistedProblem(persistedPlayer.getId(), "problem1");
-    final Problem problem2 = getPersistedProblem(persistedPlayer.getId(), "problem2");
+    final Problem problem1 = getPersistedProblem(persistedPlayer.getId(), new int[0][0]);
+    final Problem problem2 = getPersistedProblem(persistedPlayer.getId(), new int[0][0]);
 
     final List<Problem> allProblemsForCreator = problemsService.getAllProblemsForCreator(persistedPlayer.getUsername());
 
@@ -109,11 +109,11 @@ public class ProblemsServiceTest {
   @TestTransaction
   void findAllProblems() {
     final Player persistedPlayer1 = getPersistedPlayer();
-    final Problem problem1 = getPersistedProblem(persistedPlayer1.getId(), "problem1");
-    final Problem problem2 = getPersistedProblem(persistedPlayer1.getId(), "problem2");
+    final Problem problem1 = getPersistedProblem(persistedPlayer1.getId(), new int[0][0]);
+    final Problem problem2 = getPersistedProblem(persistedPlayer1.getId(), new int[0][0]);
     final Player persistedPlayer2 = getPersistedPlayer();
-    final Problem problem3 = getPersistedProblem(persistedPlayer2.getId(), "problem3");
-    final Problem problem4 = getPersistedProblem(persistedPlayer2.getId(), "problem4");
+    final Problem problem3 = getPersistedProblem(persistedPlayer2.getId(), new int[0][0]);
+    final Problem problem4 = getPersistedProblem(persistedPlayer2.getId(), new int[0][0]);
     final List<Problem> problems = Arrays.asList(problem1, problem2, problem3, problem4);
 
     final List<Problem> allProblems = problemsService.getAllProblems();
@@ -128,7 +128,7 @@ public class ProblemsServiceTest {
     return Player.from(player);
   }
 
-  private Problem getPersistedProblem(long playerId, String initialProblem) {
+  private Problem getPersistedProblem(long playerId, int[][] initialProblem) {
     final ProblemImpl problemImpl = new ProblemImpl();
     problemImpl.setInitialProblemState(initialProblem);
     final PlayerImpl player = em.getReference(PlayerImpl.class, playerId);

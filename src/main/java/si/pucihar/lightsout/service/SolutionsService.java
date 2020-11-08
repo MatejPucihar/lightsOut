@@ -64,13 +64,13 @@ public class SolutionsService {
     final ProblemImpl problem = em.getReference(ProblemImpl.class, solution.getProblemId());
     final PlayerImpl player = em.getReference(PlayerImpl.class, solution.getPlayerId());
 
-    final LightsOutSolver.ValidationResult validationResult = lightsOutSolver.stepsSolveProblem(
+    final LightsOutSolver.SolverResult solverResult = lightsOutSolver.stepsSolveProblem(
       problem.getInitialProblemState(), solution.getSolutionSteps());
 
-    if (!validationResult.isValid()){
+    if (!solverResult.isValid()){
       throw new BadRequestException(
         Response.status(Response.Status.BAD_REQUEST)
-          .entity(validationResult.getMessage())
+          .entity(solverResult.getMessage())
           .build());
     }
 

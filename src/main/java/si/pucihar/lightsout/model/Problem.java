@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class Problem {
   private Long id;
-  @NonNull private String initialProblemState;
+  @NonNull private int[][] initialProblemState;
   @NonNull private long creatorId;
   private List<Long> solutionIds;
 

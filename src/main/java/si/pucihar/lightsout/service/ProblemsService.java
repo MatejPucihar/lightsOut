@@ -62,13 +62,13 @@ public class ProblemsService {
   @Transactional
   public Problem saveProblem(Problem problem) {
     log.info("Starting solver for problem: " + problem.getInitialProblemState() + " at " + LocalDateTime.now());
-    final LightsOutSolver.ValidationResult validationResult = lightsOutSolver.isSolvable(problem.getInitialProblemState());
+    final LightsOutSolver.SolverResult solverResult = lightsOutSolver.isSolvable(problem.getInitialProblemState());
     log.info("Solver finished problem at " + LocalDateTime.now());
 
-    if (!validationResult.isValid()){
+    if (!solverResult.isValid()){
       throw new BadRequestException(
         Response.status(Response.Status.BAD_REQUEST)
-          .entity(validationResult.getMessage())
+          .entity(solverResult.getMessage())
           .build());
     }
 

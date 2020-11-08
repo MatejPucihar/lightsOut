@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
 import si.pucihar.lightsout.model.Problem;
 import si.pucihar.lightsout.service.ProblemsService;
+import si.pucihar.lightsout.solver.ExampleMatrices;
 
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
@@ -23,7 +24,7 @@ import static org.mockito.Mockito.*;
 @QuarkusTest
 public class ProblemsResourceTest {
   private static final Jsonb jsonb = JsonbBuilder.create();
-  private static final List<Problem> problems = Collections.singletonList(new Problem("test", 11L));
+  private static final List<Problem> problems = Collections.singletonList(new Problem(ExampleMatrices.m3x3Solved, 11L));
 
   @InjectMock
   ProblemsService problemsService;
@@ -79,6 +80,13 @@ public class ProblemsResourceTest {
   @Test
   void saveEmptyProblem() {
     given().body("").contentType(ContentType.JSON).post("/problems")
+      .then()
+      .statusCode(400);
+  }
+
+  @Test
+  void saveNonArrayProblem() {
+    given().body("notAnIntArray").contentType(ContentType.JSON).post("/problems")
       .then()
       .statusCode(400);
   }

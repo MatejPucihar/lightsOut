@@ -12,6 +12,8 @@ import org.jscience.mathematics.vector.DenseVector;
 import si.pucihar.lightsout.model.SolutionStep;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.json.bind.Jsonb;
+import javax.json.bind.JsonbBuilder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -23,47 +25,47 @@ import static org.jscience.mathematics.number.ModuloInteger.setModulus;
 @Slf4j
 @ApplicationScoped
 public class LightsOutSolver {
-   static{
+  private static final Jsonb JSONB = JsonbBuilder.create();
+
+  static {
     setModulus(LargeInteger.valueOf(2));
   }
 
-  public ValidationResult isSolvable(String initialProblemState) {
-    final Integer[][] initialProblemStateMatrix = getInitialProblemStateArrayMatrix(initialProblemState);
-    final String problemValidation = validateProblem(initialProblemState, initialProblemStateMatrix);
+  public SolverResult isSolvable(int[][] initialProblemState) {
+    final String problemValidation = validateProblem(initialProblemState);
     if (!StringUtils.isNullOrEmpty(problemValidation)) {
-      return ValidationResult.failure(problemValidation);
+      return SolverResult.failure(problemValidation);
     }
 
     final DenseMatrix<ModuloInteger> rowEchelonForm =
-      buildRowEchelonGaussianMatrixOfButtonPressCorrelationsWithProblemMatrix(initialProblemStateMatrix);
-    log.info("Problem: \n " + initialProblemState.replace(";", ";\n"));
+      buildRowEchelonGaussianMatrixOfButtonPressCorrelationsWithProblemMatrix(initialProblemState);
+    log.info("Problem: \n " + JSONB.toJson(initialProblemState));
     log.info("Solution: \n " + rowEchelonForm.toText());
 
     //check if any row has ZERO on diagonal and last element(the solution vector) is 1.
     for (int row = rowEchelonForm.getNumberOfRows() - 1; row >= 0; row--) {
-      if (rowEchelonForm.get(row, row).equals(ZERO) && rowEchelonForm.get(row, row + 1).equals(ONE)) {
-        return ValidationResult.failure("no solution exist!"); //no solution exists!
+      if (rowEchelonForm.get(row, row).equals(ZERO) && rowEchelonForm.get(row, rowEchelonForm.getNumberOfRows()).equals(ONE)) {
+        return SolverResult.failure("no solution exist!"); //no solution exists!
       }
     }
 
-    return ValidationResult.success();
+    return SolverResult.success();
   }
 
-  public  ValidationResult stepsSolveProblem(String initialProblemState, List<SolutionStep> solutionSteps){
-    final Integer[][] initialProblemStateMatrix = getInitialProblemStateArrayMatrix(initialProblemState);
-    if (!StringUtils.isNullOrEmpty(validateProblem(initialProblemState, initialProblemStateMatrix))){
+  public SolverResult stepsSolveProblem(int[][] initialProblemState, List<SolutionStep> solutionSteps) {
+    if (!StringUtils.isNullOrEmpty(validateProblem(initialProblemState))) {
       throw new RuntimeException("problems should be validated before checking if solution steps solve the problem!");
     }
 
     final boolean allStepsAreWithinBounds = solutionSteps.stream().allMatch(solutionStep ->
-      solutionStep.getPressColumn() < initialProblemStateMatrix.length &&
-        solutionStep.getPressRow() < initialProblemStateMatrix.length);
+      solutionStep.getPressColumn() < initialProblemState.length &&
+        solutionStep.getPressRow() < initialProblemState.length);
     if (!allStepsAreWithinBounds) {
-      return ValidationResult.failure("solution consists of impossible steps for given problem!");
+      return SolverResult.failure("solution consists of impossible steps for given problem!");
     }
 
-    ModuloInteger[][] problemMatrix = Arrays.stream(initialProblemStateMatrix)
-      .map(row -> Arrays.stream(row).map(value -> valueOf(LargeInteger.valueOf(value))).toArray(ModuloInteger[]::new))
+    ModuloInteger[][] problemMatrix = Arrays.stream(initialProblemState)
+      .map(row -> Arrays.stream(row).mapToObj(value -> valueOf(String.valueOf(value))).toArray(ModuloInteger[]::new))
       .toArray(ModuloInteger[][]::new);
 
     for (SolutionStep solutionStep : solutionSteps) {
@@ -77,15 +79,15 @@ public class LightsOutSolver {
     }
 
     final boolean problemSolved = Arrays.stream(problemMatrix).flatMap(Arrays::stream).allMatch(light -> light.equals(ZERO));
-    return problemSolved ? ValidationResult.success() : ValidationResult.failure("problem was not solved!");
+    return problemSolved ? SolverResult.success() : SolverResult.failure("problem was not solved!");
   }
 
-  private  String validateProblem(String initialProblemState, Integer[][] initialProblemStateMatrix) {
-    final boolean noIllegalElements = Arrays.stream(initialProblemStateMatrix)
-      .flatMap(Arrays::stream).allMatch(a -> a == 0 || a == 1);
-    final boolean squareMatrix = Arrays.stream(initialProblemStateMatrix)
-      .allMatch(a -> a.length == initialProblemStateMatrix.length);
-    final boolean correctMatrixSize = initialProblemStateMatrix.length < 9 && initialProblemStateMatrix.length > 2;
+  private String validateProblem(int[][] initialProblemState) {
+    final boolean noIllegalElements = Arrays.stream(initialProblemState)
+      .flatMapToInt(Arrays::stream).allMatch(a -> a == 0 || a == 1);
+    final boolean squareMatrix = Arrays.stream(initialProblemState)
+      .allMatch(a -> a.length == initialProblemState.length);
+    final boolean correctMatrixSize = initialProblemState.length < 9 && initialProblemState.length > 2;
 
     if (!noIllegalElements) {
       return "there are illegal characters in initial problem matrix! " + initialProblemState;
@@ -94,16 +96,17 @@ public class LightsOutSolver {
       return "initial problem matrix is not square! " + initialProblemState;
     }
     if (!correctMatrixSize) {
-      return "matrix size must be 2<size<9 but is " + initialProblemStateMatrix.length;
+      return "matrix size must be 2<size<9 but is " + initialProblemState.length;
     }
     return null;
   }
 
-  private  DenseMatrix<ModuloInteger> buildRowEchelonGaussianMatrixOfButtonPressCorrelationsWithProblemMatrix(
-    final Integer[][] initialProblemStateMatrix) {
+  //package private
+  DenseMatrix<ModuloInteger> buildRowEchelonGaussianMatrixOfButtonPressCorrelationsWithProblemMatrix(
+    final int[][] initialProblemStateMatrix) {
     final List<ModuloInteger> lightsVector = Arrays.stream(initialProblemStateMatrix)
-      .flatMap(Arrays::stream)
-      .map(i -> valueOf(String.valueOf(i)))
+      .flatMapToInt(Arrays::stream)
+      .mapToObj(i -> valueOf(String.valueOf(i)))
       .collect(Collectors.toList());
 
     final DenseMatrix<ModuloInteger> correlationMatrix =
@@ -112,7 +115,7 @@ public class LightsOutSolver {
     return toGaussianRowEchelonForm(correlationMatrix);
   }
 
-  private  DenseMatrix<ModuloInteger> toGaussianRowEchelonForm(DenseMatrix<ModuloInteger> matrix) {
+  private DenseMatrix<ModuloInteger> toGaussianRowEchelonForm(DenseMatrix<ModuloInteger> matrix) {
     DenseMatrix<ModuloInteger> matrixToUse = matrix.copy();
 
     //step1: upper triangular
@@ -149,7 +152,7 @@ public class LightsOutSolver {
     return matrixToUse;
   }
 
-  private  DenseMatrix<ModuloInteger> swapRows(DenseMatrix<ModuloInteger> matrixToUse, int i, int j) {
+  private DenseMatrix<ModuloInteger> swapRows(DenseMatrix<ModuloInteger> matrixToUse, int i, int j) {
     final ArrayList<DenseVector<ModuloInteger>> matrix = new ArrayList<>();
     for (int i1 = 0; i1 < matrixToUse.getNumberOfRows(); i1++) {
       if (i1 == j) {
@@ -163,7 +166,7 @@ public class LightsOutSolver {
     return DenseMatrix.valueOf(matrix);
   }
 
-  private  DenseMatrix<ModuloInteger> replaceRow(
+  private DenseMatrix<ModuloInteger> replaceRow(
     DenseMatrix<ModuloInteger> matrixToUse, DenseVector<ModuloInteger> newRow,
     int rowIndex) {
     final List<DenseVector<ModuloInteger>> newMatrix = new ArrayList<>();
@@ -177,7 +180,7 @@ public class LightsOutSolver {
     return DenseMatrix.valueOf(newMatrix);
   }
 
-  private  DenseMatrix<ModuloInteger> buildButtonPressCorrelationMatrix(int length, List<ModuloInteger> b) {
+  private DenseMatrix<ModuloInteger> buildButtonPressCorrelationMatrix(int length, List<ModuloInteger> b) {
     final ModuloInteger[][] correlationMatrix = new ModuloInteger[length * length][length * length + 1];
     for (int matrixRow = 0; matrixRow < length; matrixRow++) {
       for (int matrixColumn = 0; matrixColumn < length; matrixColumn++) {
@@ -194,7 +197,7 @@ public class LightsOutSolver {
     return DenseMatrix.valueOf(correlationMatrix);
   }
 
-  private  List<Integer> getCorrelationIndexes(int matrixRow, int matrixColumn, int matrixLength) {
+  private List<Integer> getCorrelationIndexes(int matrixRow, int matrixColumn, int matrixLength) {
     final ArrayList<Integer> correlations = new ArrayList<>();
     correlations.add(matrixRow * matrixLength + matrixColumn);
     if (matrixRow > 0) {
@@ -212,26 +215,18 @@ public class LightsOutSolver {
     return correlations;
   }
 
-  private  Integer[][] getInitialProblemStateArrayMatrix(String initialProblemState) {
-    return Arrays.stream(initialProblemState.split(";"))
-      .map(row ->
-        Arrays.stream(row.split(","))
-          .map(Integer::valueOf)
-          .toArray(Integer[]::new))
-      .toArray(Integer[][]::new);
-  }
-
   @Getter
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class ValidationResult{
+  public static class SolverResult {
     private final boolean valid;
     private final String message;
 
-    public static ValidationResult success(){
-      return new ValidationResult(true, null);
+    public static SolverResult success() {
+      return new SolverResult(true, null);
     }
-    public static ValidationResult failure(String message){
-      return new ValidationResult(false, message);
+
+    public static SolverResult failure(String message) {
+      return new SolverResult(false, message);
     }
   }
 }
