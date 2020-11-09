@@ -1,9 +1,10 @@
-# lights-out project
-
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
-
-If you want to learn more about Quarkus, please visit its website: https://quarkus.io/ .
-
+# lights-out
+Features algorithm determining if of lights out game's initial state can be solved. In addition, there is logic of saving players, games, solutions and solution steps. 
+Swagger docs are available in dev mode:
+```
+http://localhost:8080/swagger-ui
+http://localhost:8080/swagger
+```
 ## Running the application in dev mode
 
 You can run your application in dev mode that enables live coding using:

@@ -1,6 +1,7 @@
 package si.pucihar.lightsout.model;
 
 import lombok.*;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import si.pucihar.lightsout.model.jpa.IdEntity;
 import si.pucihar.lightsout.model.jpa.ProblemImpl;
 
